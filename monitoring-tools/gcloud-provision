@@ -1,0 +1,50 @@
+#!/bin/bash
+
+# Provision a Google Cloud instance in a specific zone. If VPs are created on GCE, this script can be used for fast provisioning after creating an image.
+
+# IPRI project
+PROJECT="changeme"
+# IPRI account
+ACCOUNT="changeme@developer.gserviceaccount.com"
+IMAGE="changeme"
+
+
+function usage {
+	echo "usage: $0 --zone=[gcloud-zone] --name=[vm-name]"
+	echo -e "Provision a new Google Compute Engine VM in a certain\navailability zone using the IPFS watcher template."
+}
+
+while [ "$1" != "" ]; do
+    PARAM=`echo $1 | awk -F= '{print $1}'`
+    VALUE=`echo $1 | awk -F= '{print $2}'`
+    case $PARAM in
+        -h | --help)
+            usage
+            exit
+            ;;
+        --zone)
+            ZONE=$VALUE
+            ;;
+        --name)
+            LABEL=$VALUE
+            ;;
+        *)
+            echo "ERROR: unknown parameter \"$PARAM\""
+            usage
+            exit 1
+            ;;
+    esac
+    shift
+done
+
+if test -z != "$ZONE" && test -z "$LABEL" ; then
+	echo "Please specify both a name and a zone."
+	usage
+else
+	NAME="ipfs-vp-$LABEL"
+	echo "Creating IPFS watcher VM $LABEL in $ZONE"
+	gcloud compute --project=$PROJECT instances create $NAME --zone=$ZONE --machine-type=custom-1-2816 --subnet=default --network-tier=PREMIUM --maintenance-policy=MIGRATE --service-account=$ACCOUNT --scopes=https://www.googleapis.com/auth/devstorage.read_only,https://www.googleapis.com/auth/logging.write,https://www.googleapis.com/auth/monitoring.write,https://www.googleapis.com/auth/servicecontrol,https://www.googleapis.com/auth/service.management.readonly,https://www.googleapis.com/auth/trace.append --image=$IMAGE --image-project=$PROJECT --boot-disk-size=10GB --boot-disk-type=pd-standard --boot-disk-device-name=$NAME
+fi
+
+
+

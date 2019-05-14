@@ -1,0 +1,24 @@
+#!/bin/bash
+
+function timestamp {
+	jq -c '. + {TIMESTAMP: now}'
+}
+function annotate {
+	jq --arg foo $1 '. + {NOTE: $foo}'
+}
+function annotate_type {
+	jq --arg foo $1 '. + {LOGTYPE: $foo}'
+}
+function annotate_host {
+	jq --arg host $(hostname) '. + {VANTAGE: $host}'
+}
+
+function fetchAPI {
+	# fetchAPI <apipath> <apiargs>
+	if [ -z "$2" ]; then
+		curl -s "$ENDPOINT$1?" -G | annotate_host
+
+	else
+		curl -s "$ENDPOINT$1?" -G -d $2 | annotate_host
+	fi
+}

@@ -1,0 +1,15 @@
+#!/bin/bash
+
+############################### Mongo conf ####################################
+MONGO_HOST=""
+MONGO_DB=""
+MONGO_USER=""
+MONGO_PW=""
+
+function mimport {
+	mongoimport --quiet --host $MONGO_HOST -u $MONGO_USER -p $MONGO_PW --db $MONGO_DB "$@"
+}
+
+function mongotest_save_ipfs_config {
+	ipfs config show | tee ~/measurement/initial-ipfs-config-$(date +%s).json | mimport --collection ipfsconfig
+}

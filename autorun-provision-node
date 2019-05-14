@@ -1,0 +1,51 @@
+#!/bin/bash
+
+## Provision a measurement node with IPFS and related tools
+## Assumes imaged Google snapshot with golang-1.12, jq, mongo-client installed
+
+GIT_USER="changeme"
+GIT_TOKEN="changeme"
+NFS_VOLUME="127.0.0.1:/changemet" # Obtained w/ `gcloud filestore instances list`
+INSTALL_FLAG="$HOME/.ipfs-probe-provision-complete" # Created on setup 
+
+# Just run the scripts on start if everything's already there
+if test -f "$INSTALL_FLAG"; then
+	echo "Provision has already been completed. Running probe."
+	$HOME/measurement/measure.sh
+else
+	clear
+	echo "Installing go, jq, mongodb client, and python packages"
+	sudo apt install -y golang-1.12/unstable jq mongodb-clients nfs-common python3-pip
+	sudo pip3 install jsonlines tqdm pymongo
+	
+	echo "Mounting NFS storage for DHT logs"
+	cd $HOME
+	mkdir $HOME/dht-data
+
+	sudo mount $NFS_VOLUME $HOME/dht-data
+	sudo chmod go+rw $HOME/dht-data
+
+	echo "Getting probe scripts"
+	git clone https://$GIT_USER:$GIT_TOKEN@github.mit.edu/ipfs-measurement/measurement
+	chmod +x $HOME/measurement/*.sh
+
+	# Load mongoDB helper script
+	source $HOME/measurement/mongo_helpers
+
+	echo "Getting IPFS"
+	go get -u github.com/ipfs/ipfs-update
+
+	echo "Installing IPFS"
+	ipfs-update install latest
+
+	echo "Provisioning IPFS with server profile"
+	ipfs init --profile=server
+	ipfs config Datastore.StorageMax "4GB" # For small VMs
+	
+	echo "Sending IPFS configuration to server"
+	mongotest_save_ipfs_config
+	# If this fails, then something in the mongoDB pipeline has failed
+
+	echo "Finished configuration with IPFS peer ID $(ipfs config show | jq .Identity.PeerID)"
+	touch $INSTALL_FLAG
+fi	
